@@ -9,12 +9,34 @@ export default class EventDispatcher {
 			this._events[type] = [];
 		}
 		
-		this._events[type].push(listener);
+		this._events[type].push({
+			listen: listener,
+			once: false
+		});
+		
+		return this;
+	}
+	
+	once(type, listener) {
+		if ( ! this._events[type]) {
+			this._events[type] = [];
+		}
+		
+		this._events[type].push({
+			listen: listener,
+			once: true
+		});
 		
 		return this;
 	}
 	
 	off(type, listener) {
+		if ( ! type) {
+			this._events = {};
+			
+			return this;
+		}
+		
 		if ( ! listener) {
 			this._events[type] = [];
 			
@@ -26,7 +48,7 @@ export default class EventDispatcher {
 		let l = list.length;
 		
 		while (l--) {
-			if (list[l] === listener) {
+			if (list[l].listen === listener) {
 				list.splice(l, 1);
 			}
 		}
@@ -35,22 +57,29 @@ export default class EventDispatcher {
 	}
 	
 	emit(type, ...args) {
-		const list = this._events[type];
+		const lists = this._events[type];
 		
-		if ( ! list || list.length === 0) {
+		if ( ! lists || lists.length === 0) {
 			return this;
 		}
 		
-		let l = list.length;
+		let l = lists.length;
+		let list;
 		
 		while (l--) {
-			list[l].apply(null, args);
+			list = lists[l];
+			
+			list.listen.apply(null, args);
+			
+			if (list.once) {
+				lists.splice(l, 1);
+			}
 		}
 		
 		return this;
 	}
 	
 	destroy() {
-		this._events = {};
+		this.off();
 	}
 }
